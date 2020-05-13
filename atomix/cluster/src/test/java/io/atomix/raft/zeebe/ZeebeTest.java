@@ -130,7 +130,7 @@ public class ZeebeTest {
     final ZeebeLogAppender appender = helper.awaitLeaderAppender(partitionId);
 
     // when
-    final Indexed<ZeebeEntry> appended = appenderWrapper.append(appender, 0, 0, getIntAsBytes(0));
+    final Indexed<ZeebeEntry> appended = appenderWrapper.append(appender, getIntAsBytes(0));
 
     // then
     helper.awaitAllContain(partitionId, appended);
@@ -144,10 +144,9 @@ public class ZeebeTest {
     final ZeebeLogAppender appender = helper.awaitLeaderAppender(partitionId);
 
     // when
-    final Indexed<ZeebeEntry> firstAppended =
-        appenderWrapper.append(appender, 0L, 0L, getIntAsBytes(0));
+    final Indexed<ZeebeEntry> firstAppended = appenderWrapper.append(appender, getIntAsBytes(0));
     for (int i = 1; i < ENTRIES_PER_SEGMENT; i++) {
-      helper.awaitAllContain(partitionId, appenderWrapper.append(appender, i, i, getIntAsBytes(i)));
+      helper.awaitAllContain(partitionId, appenderWrapper.append(appender, getIntAsBytes(i)));
     }
     server.snapshot().join();
 
@@ -163,10 +162,10 @@ public class ZeebeTest {
     final ZeebeLogAppender appender = helper.awaitLeaderAppender(partitionId);
 
     // when
-    Indexed<ZeebeEntry> appended = appenderWrapper.append(appender, 0L, 0L, getIntAsBytes(0));
+    Indexed<ZeebeEntry> appended = appenderWrapper.append(appender, getIntAsBytes(0));
     final Indexed<ZeebeEntry> firstAppended = appended;
     for (int i = 1; i < ENTRIES_PER_SEGMENT; i++) {
-      appended = appenderWrapper.append(appender, i, i, getIntAsBytes(i));
+      appended = appenderWrapper.append(appender, getIntAsBytes(i));
       helper.awaitAllContain(partitionId, appended);
     }
     server.setCompactableIndex(appended.index());
@@ -217,7 +216,7 @@ public class ZeebeTest {
           nodes.stream().filter(node -> !node.equals(follower)).collect(Collectors.toList());
       follower.stop().join();
 
-      entries.add(i, appenderWrapper.append(appender, i, i, getIntAsBytes(i)));
+      entries.add(i, appenderWrapper.append(appender, getIntAsBytes(i)));
       helper.awaitAllContains(others, partitionId, entries.get(i));
       follower.start(nodes).join();
     }
@@ -246,7 +245,7 @@ public class ZeebeTest {
 
     // when - then
     for (int i = 0; i < 5; i++) {
-      final Indexed<ZeebeEntry> entry = appenderWrapper.append(appender, i, i, getIntAsBytes(i));
+      final Indexed<ZeebeEntry> entry = appenderWrapper.append(appender, getIntAsBytes(i));
       final int expectedCount = i + 1;
       helper.awaitAllContains(nodes, partitionId, entry);
 
@@ -273,7 +272,7 @@ public class ZeebeTest {
     // when
     final ZeebeLogAppender oldAppender =
         oldLeader.getPartitionServer(partitionId).getAppender().orElseThrow();
-    appenderWrapper.append(oldAppender, 0, 0, ByteBuffer.allocate(Integer.BYTES).putInt(0, 1));
+    appenderWrapper.append(oldAppender, ByteBuffer.allocate(Integer.BYTES).putInt(0, 1));
 
     oldLeader.stop().join();
     final ZeebeTestNode newLeader = helper.awaitLeader(partitionId, followers);
@@ -282,7 +281,7 @@ public class ZeebeTest {
     // then
     final ZeebeLogAppender newAppender =
         newLeader.getPartitionServer(partitionId).getAppender().orElseThrow();
-    appenderWrapper.append(newAppender, 1, 1, ByteBuffer.allocate(Integer.BYTES).putInt(0, 1));
+    appenderWrapper.append(newAppender, ByteBuffer.allocate(Integer.BYTES).putInt(0, 1));
   }
 
   @Test
@@ -298,7 +297,7 @@ public class ZeebeTest {
     // when
     final ZeebeLogAppender oldAppender =
         oldLeader.getPartitionServer(partitionId).getAppender().orElseThrow();
-    appenderWrapper.append(oldAppender, 0, 0, ByteBuffer.allocate(Integer.BYTES).putInt(0, 1));
+    appenderWrapper.append(oldAppender, ByteBuffer.allocate(Integer.BYTES).putInt(0, 1));
     appenderWrapper.pollCommitted();
 
     oldLeader.stop().join();
@@ -311,8 +310,6 @@ public class ZeebeTest {
 
     final CountDownLatch latch = new CountDownLatch(1);
     newAppender.appendEntry(
-        0,
-        0,
         ByteBuffer.allocate(Integer.BYTES).putInt(0, 1),
         new AppendListener() {
           @Override
@@ -322,6 +319,9 @@ public class ZeebeTest {
           public void onWriteError(Throwable error) {
             latch.countDown();
           }
+
+          @Override
+          public void updateRecords(ZeebeEntry entry, long index) {}
 
           @Override
           public void onCommit(Indexed<ZeebeEntry> indexed) {}

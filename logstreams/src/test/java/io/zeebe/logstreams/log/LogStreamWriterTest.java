@@ -18,8 +18,12 @@ import io.zeebe.logstreams.util.SynchronousLogStream;
 import io.zeebe.util.buffer.DirectBufferWriter;
 import io.zeebe.util.sched.future.ActorFuture;
 import io.zeebe.util.sched.testing.ControlledActorSchedulerRule;
+import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.After;
@@ -80,9 +84,12 @@ public final class LogStreamWriterTest {
   }
 
   @Test
-  public void shouldReturnPositionOfWrittenEvent() {
+  public void shouldReturnOptionalFuture()
+      throws InterruptedException, ExecutionException, TimeoutException {
     // when
-    final long position = writer.value(EVENT_VALUE).tryWrite();
+    final Optional<Future<Long>> optFuture = writer.value(EVENT_VALUE).tryWrite();
+    assertThat(optFuture).isPresent();
+    final long position = optFuture.get().get(5, TimeUnit.SECONDS);
 
     // then
     assertThat(position).isGreaterThan(0);
@@ -92,9 +99,12 @@ public final class LogStreamWriterTest {
   }
 
   @Test
-  public void shouldWriteEventWithValueBuffer() {
+  public void shouldWriteEventWithValueBuffer()
+      throws InterruptedException, ExecutionException, TimeoutException {
     // when
-    final long position = writer.value(EVENT_VALUE).tryWrite();
+    final Optional<Future<Long>> optFuture = writer.value(EVENT_VALUE).tryWrite();
+    assertThat(optFuture).isPresent();
+    final long position = optFuture.get().get(5, TimeUnit.SECONDS);
 
     // then
     final LoggedEvent event = getWrittenEvent(position);
@@ -106,9 +116,13 @@ public final class LogStreamWriterTest {
   }
 
   @Test
-  public void shouldWriteEventWithValueBufferPartially() {
+  public void shouldWriteEventWithValueBufferPartially()
+      throws InterruptedException, ExecutionException, TimeoutException {
     // when
-    final long position = writer.value(EVENT_VALUE, 1, 2).tryWrite();
+    final Optional<Future<Long>> optFuture = writer.value(EVENT_VALUE, 1, 2).tryWrite();
+
+    assertThat(optFuture).isPresent();
+    final long position = optFuture.get().get(5, TimeUnit.SECONDS);
 
     // then
     final LoggedEvent event = getWrittenEvent(position);
@@ -120,9 +134,14 @@ public final class LogStreamWriterTest {
   }
 
   @Test
-  public void shouldWriteEventWithValueWriter() {
+  public void shouldWriteEventWithValueWriter()
+      throws InterruptedException, ExecutionException, TimeoutException {
     // when
-    final long position = writer.valueWriter(new DirectBufferWriter().wrap(EVENT_VALUE)).tryWrite();
+    final Optional<Future<Long>> optFuture =
+        writer.valueWriter(new DirectBufferWriter().wrap(EVENT_VALUE)).tryWrite();
+
+    assertThat(optFuture).isPresent();
+    final long position = optFuture.get().get(5, TimeUnit.SECONDS);
 
     // then
     final LoggedEvent event = getWrittenEvent(position);
@@ -134,9 +153,14 @@ public final class LogStreamWriterTest {
   }
 
   @Test
-  public void shouldWriteEventWithMetadataBuffer() {
+  public void shouldWriteEventWithMetadataBuffer()
+      throws InterruptedException, ExecutionException, TimeoutException {
     // when
-    final long position = writer.value(EVENT_VALUE).metadata(EVENT_METADATA).tryWrite();
+    final Optional<Future<Long>> optFuture =
+        writer.value(EVENT_VALUE).metadata(EVENT_METADATA).tryWrite();
+
+    assertThat(optFuture).isPresent();
+    final long position = optFuture.get().get(5, TimeUnit.SECONDS);
 
     // then
     final LoggedEvent event = getWrittenEvent(position);
@@ -148,9 +172,14 @@ public final class LogStreamWriterTest {
   }
 
   @Test
-  public void shouldWriteEventWithMetadataBufferPartially() {
+  public void shouldWriteEventWithMetadataBufferPartially()
+      throws InterruptedException, ExecutionException, TimeoutException {
     // when
-    final long position = writer.value(EVENT_VALUE).metadata(EVENT_METADATA, 1, 2).tryWrite();
+    final Optional<Future<Long>> optFuture =
+        writer.value(EVENT_VALUE).metadata(EVENT_METADATA, 1, 2).tryWrite();
+
+    assertThat(optFuture).isPresent();
+    final long position = optFuture.get().get(5, TimeUnit.SECONDS);
 
     // then
     final LoggedEvent event = getWrittenEvent(position);
@@ -162,13 +191,17 @@ public final class LogStreamWriterTest {
   }
 
   @Test
-  public void shouldWriteEventWithMetadataWriter() {
+  public void shouldWriteEventWithMetadataWriter()
+      throws InterruptedException, ExecutionException, TimeoutException {
     // when
-    final long position =
+    final Optional<Future<Long>> optFuture =
         writer
             .value(EVENT_VALUE)
             .metadataWriter(new DirectBufferWriter().wrap(EVENT_METADATA))
             .tryWrite();
+
+    assertThat(optFuture).isPresent();
+    final long position = optFuture.get().get(5, TimeUnit.SECONDS);
 
     // then
     final LoggedEvent event = getWrittenEvent(position);
@@ -180,23 +213,34 @@ public final class LogStreamWriterTest {
   }
 
   @Test
-  public void shouldWriteEventWithKey() {
+  public void shouldWriteEventWithKey()
+      throws InterruptedException, ExecutionException, TimeoutException {
     // when
-    final long position = writer.key(123L).value(EVENT_VALUE).tryWrite();
+    final Optional<Future<Long>> optFuture = writer.key(123L).value(EVENT_VALUE).tryWrite();
+
+    assertThat(optFuture).isPresent();
+    final long position = optFuture.get().get(5, TimeUnit.SECONDS);
 
     // then
     assertThat(getWrittenEvent(position).getKey()).isEqualTo(123L);
   }
 
   @Test
-  public void shouldWriteEventsWithDifferentWriters() {
+  public void shouldWriteEventsWithDifferentWriters()
+      throws InterruptedException, ExecutionException, TimeoutException {
     // given
-    final long firstPosition = writer.key(123L).value(EVENT_VALUE).tryWrite();
+    Optional<Future<Long>> optFuture = writer.key(123L).value(EVENT_VALUE).tryWrite();
+
+    assertThat(optFuture).isPresent();
+    final long firstPosition = optFuture.get().get(5, TimeUnit.SECONDS);
 
     // when
     final SynchronousLogStream logStream = logStreamRule.getLogStream();
     writer = logStream.newLogStreamRecordWriter();
-    final long secondPosition = writer.key(124L).value(EVENT_VALUE).tryWrite();
+    optFuture = writer.key(124L).value(EVENT_VALUE).tryWrite();
+
+    assertThat(optFuture).isPresent();
+    final long secondPosition = optFuture.get().get(5, TimeUnit.SECONDS);
 
     // then
     assertThat(secondPosition).isGreaterThan(firstPosition);
@@ -205,9 +249,13 @@ public final class LogStreamWriterTest {
   }
 
   @Test
-  public void shouldCloseAllWritersAndWriteAgain() {
+  public void shouldCloseAllWritersAndWriteAgain()
+      throws InterruptedException, ExecutionException, TimeoutException {
     // given
-    final long firstPosition = writer.key(123L).value(EVENT_VALUE).tryWrite();
+    Optional<Future<Long>> optFuture = writer.key(123L).value(EVENT_VALUE).tryWrite();
+    assertThat(optFuture).isPresent();
+    final long firstPosition = optFuture.get().get(5, TimeUnit.SECONDS);
+
     writerRule.waitForPositionToBeAppended(firstPosition);
 
     // when
@@ -215,7 +263,10 @@ public final class LogStreamWriterTest {
 
     final SynchronousLogStream logStream = logStreamRule.getLogStream();
     writer = logStream.newLogStreamRecordWriter();
-    final long secondPosition = writer.key(124L).value(EVENT_VALUE).tryWrite();
+
+    optFuture = writer.key(124L).value(EVENT_VALUE).tryWrite();
+    assertThat(optFuture).isPresent();
+    final long secondPosition = optFuture.get().get(5, TimeUnit.SECONDS);
 
     // then
     assertThat(secondPosition).isGreaterThan(firstPosition);
@@ -225,7 +276,12 @@ public final class LogStreamWriterTest {
 
   @Test
   public void shouldWriteEventWithTimestamp() throws InterruptedException, ExecutionException {
-    final Callable<Long> doWrite = () -> writer.keyNull().value(EVENT_VALUE).tryWrite();
+    final Callable<Long> doWrite =
+        () -> {
+          Optional<Future<Long>> optFuture = writer.keyNull().value(EVENT_VALUE).tryWrite();
+          assertThat(optFuture).isPresent();
+          return optFuture.get().get(5, TimeUnit.SECONDS);
+        };
 
     // given
     final long firstTimestamp = System.currentTimeMillis();
@@ -251,9 +307,13 @@ public final class LogStreamWriterTest {
   }
 
   @Test
-  public void shouldWriteEventWithSourceEvent() {
+  public void shouldWriteEventWithSourceEvent()
+      throws InterruptedException, ExecutionException, TimeoutException {
     // when
-    final long position = writer.value(EVENT_VALUE).sourceRecordPosition(123L).tryWrite();
+    Optional<Future<Long>> optFuture =
+        writer.value(EVENT_VALUE).sourceRecordPosition(123L).tryWrite();
+    assertThat(optFuture).isPresent();
+    final long position = optFuture.get().get(5, TimeUnit.SECONDS);
 
     // then
     final LoggedEvent event = getWrittenEvent(position);
@@ -261,9 +321,12 @@ public final class LogStreamWriterTest {
   }
 
   @Test
-  public void shouldWriteEventWithoutSourceEvent() {
+  public void shouldWriteEventWithoutSourceEvent()
+      throws InterruptedException, ExecutionException, TimeoutException {
     // when
-    final long position = writer.value(EVENT_VALUE).tryWrite();
+    Optional<Future<Long>> optFuture = writer.value(EVENT_VALUE).tryWrite();
+    assertThat(optFuture).isPresent();
+    final long position = optFuture.get().get(5, TimeUnit.SECONDS);
 
     // then
     final LoggedEvent event = getWrittenEvent(position);
@@ -271,27 +334,36 @@ public final class LogStreamWriterTest {
   }
 
   @Test
-  public void shouldWriteEventWithNullKey() {
+  public void shouldWriteEventWithNullKey()
+      throws InterruptedException, ExecutionException, TimeoutException {
     // when
-    final long position = writer.keyNull().value(EVENT_VALUE).tryWrite();
+    Optional<Future<Long>> optFuture = writer.keyNull().value(EVENT_VALUE).tryWrite();
+    assertThat(optFuture).isPresent();
+    final long position = optFuture.get().get(5, TimeUnit.SECONDS);
 
     // then
     assertThat(getWrittenEvent(position).getKey()).isEqualTo(LogEntryDescriptor.KEY_NULL_VALUE);
   }
 
   @Test
-  public void shouldWriteNullKeyByDefault() {
+  public void shouldWriteNullKeyByDefault()
+      throws InterruptedException, ExecutionException, TimeoutException {
     // when
-    final long position = writer.value(EVENT_VALUE).tryWrite();
+    Optional<Future<Long>> optFuture = writer.value(EVENT_VALUE).tryWrite();
+    assertThat(optFuture).isPresent();
+    final long position = optFuture.get().get(5, TimeUnit.SECONDS);
 
     // then
     assertThat(getWrittenEvent(position).getKey()).isEqualTo(LogEntryDescriptor.KEY_NULL_VALUE);
   }
 
   @Test
-  public void shouldFailToWriteEventWithoutValue() {
+  public void shouldFailToWriteEventWithoutValue()
+      throws InterruptedException, ExecutionException, TimeoutException {
     // when
-    final long pos = writer.keyNull().tryWrite();
+    Optional<Future<Long>> optFuture = writer.keyNull().tryWrite();
+    assertThat(optFuture).isPresent();
+    final long pos = optFuture.get().get(5, TimeUnit.SECONDS);
 
     // then
     assertThat(pos).isEqualTo(0);

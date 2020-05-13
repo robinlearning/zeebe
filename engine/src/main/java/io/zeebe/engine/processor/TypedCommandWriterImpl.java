@@ -20,6 +20,8 @@ import io.zeebe.protocol.record.ValueType;
 import io.zeebe.protocol.record.intent.Intent;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.Future;
 import java.util.function.Consumer;
 
 public class TypedCommandWriterImpl implements TypedCommandWriter {
@@ -117,7 +119,7 @@ public class TypedCommandWriterImpl implements TypedCommandWriter {
   }
 
   @Override
-  public long flush() {
+  public Optional<Future<Long>> flush() {
     return batchWriter.tryWrite();
   }
 }

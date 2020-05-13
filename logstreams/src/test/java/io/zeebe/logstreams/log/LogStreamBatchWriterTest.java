@@ -23,7 +23,10 @@ import io.zeebe.util.sched.future.ActorFuture;
 import io.zeebe.util.sched.testing.ControlledActorSchedulerRule;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
@@ -112,7 +115,14 @@ public final class LogStreamBatchWriterTest {
 
   private long write(final Consumer<LogStreamBatchWriter> consumer) {
     consumer.accept(writer);
-    return TestUtil.doRepeatedly(() -> writer.tryWrite()).until(pos -> pos > 0);
+    final Optional<Future<Long>> optionalFuture =
+        TestUtil.doRepeatedly(() -> writer.tryWrite()).until(Optional::isPresent);
+
+    try {
+      return optionalFuture.get().get(5, TimeUnit.SECONDS);
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 
   @Test
@@ -407,12 +417,14 @@ public final class LogStreamBatchWriterTest {
   }
 
   @Test
-  public void shouldNotFailToWriteBatchWithoutEvents() {
+  public void shouldNotFailToWriteBatchWithoutEvents()
+      throws ExecutionException, InterruptedException {
     // when
-    final long pos = writer.tryWrite();
+    final Optional<Future<Long>> optFuture = writer.tryWrite();
 
     // then
-    assertThat(pos).isEqualTo(0);
+    assertThat(optFuture).isPresent();
+    assertThat(optFuture.get().get()).isEqualTo(0);
   }
 
   @Test
@@ -421,9 +433,10 @@ public final class LogStreamBatchWriterTest {
     logStreamRule.getLogStream().close();
 
     // when
-    final long pos = writer.event().key(1).value(EVENT_VALUE_1).done().tryWrite();
+    final Optional<Future<Long>> optFuture =
+        writer.event().key(1).value(EVENT_VALUE_1).done().tryWrite();
 
     // then
-    assertThat(pos).isEqualTo(-1);
+    assertThat(optFuture).isEmpty();
   }
 }

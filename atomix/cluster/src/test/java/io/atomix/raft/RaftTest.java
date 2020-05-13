@@ -123,7 +123,6 @@ public class RaftTest extends ConcurrentTestCase {
   protected volatile List<RaftServer> servers = new ArrayList<>();
   protected volatile TestRaftProtocolFactory protocolFactory;
   protected volatile ThreadContext context;
-  private volatile long position = 0;
   private Path directory;
   private final Map<MemberId, TestRaftServerProtocol> serverProtocols = Maps.newConcurrentMap();
 
@@ -1818,9 +1817,7 @@ public class RaftTest extends ConcurrentTestCase {
     if (raftRole instanceof LeaderRole) {
       final var leaderRole = (LeaderRole) raftRole;
       final var appendListener = new TestAppendListener();
-      ++position;
-      leaderRole.appendEntry(
-          position, position, ByteBuffer.wrap("event".getBytes()), appendListener);
+      leaderRole.appendEntry(ByteBuffer.wrap("event".getBytes()), appendListener);
       return appendListener.awaitCommit();
     }
     throw new IllegalArgumentException(
@@ -1870,6 +1867,9 @@ public class RaftTest extends ConcurrentTestCase {
     public void onWriteError(final Throwable error) {
       fail("Unexpected write error: " + error.getMessage());
     }
+
+    @Override
+    public void updateRecords(ZeebeEntry entry, long index) {}
 
     @Override
     public void onCommitError(final Indexed<ZeebeEntry> indexed, final Throwable error) {

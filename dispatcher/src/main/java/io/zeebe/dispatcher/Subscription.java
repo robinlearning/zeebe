@@ -23,13 +23,16 @@ import static io.zeebe.dispatcher.impl.log.DataFrameDescriptor.messageOffset;
 import static io.zeebe.dispatcher.impl.log.DataFrameDescriptor.streamIdOffset;
 import static io.zeebe.dispatcher.impl.log.DataFrameDescriptor.typeOffset;
 
+import io.atomix.raft.zeebe.ZeebeEntry;
 import io.zeebe.dispatcher.impl.log.DataFrameDescriptor;
 import io.zeebe.dispatcher.impl.log.LogBuffer;
 import io.zeebe.dispatcher.impl.log.LogBufferPartition;
+import io.zeebe.dispatcher.impl.log.QuadConsumer;
 import io.zeebe.util.sched.ActorCondition;
 import io.zeebe.util.sched.channel.ActorConditions;
 import io.zeebe.util.sched.channel.ConsumableChannel;
 import java.nio.ByteBuffer;
+import java.util.Map;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.slf4j.Logger;
 
@@ -45,6 +48,7 @@ public class Subscription implements ConsumableChannel {
   protected final String name;
   protected final ActorCondition dataConsumed;
   protected final ByteBuffer rawDispatcherBufferView;
+  private final Map<Long, QuadConsumer<ZeebeEntry, Long, Integer, Integer>> handlers;
 
   protected volatile boolean isClosed = false;
 
@@ -54,7 +58,8 @@ public class Subscription implements ConsumableChannel {
       final int id,
       final String name,
       final ActorCondition onConsumption,
-      final LogBuffer logBuffer) {
+      final LogBuffer logBuffer,
+      Map<Long, QuadConsumer<ZeebeEntry, Long, Integer, Integer>> handlers) {
     this.position = position;
     this.id = id;
     this.name = name;
@@ -64,6 +69,7 @@ public class Subscription implements ConsumableChannel {
 
     // required so that a subscription can freely modify position and limit of the raw buffer
     this.rawDispatcherBufferView = logBuffer.createRawBufferView();
+    this.handlers = handlers;
   }
 
   public long getPosition() {
@@ -247,7 +253,6 @@ public class Subscription implements ConsumableChannel {
 
     if (!isClosed) {
       final long currentPosition = position.get();
-
       final long limit = getLimit();
 
       if (limit > currentPosition) {
@@ -293,6 +298,7 @@ public class Subscription implements ConsumableChannel {
       offsetLimit = partition.getPartitionSize();
     }
 
+    long startPos = -1;
     do {
       final int framedLength = buffer.getIntVolatile(lengthOffset(partitionOffset));
       if (framedLength <= 0) {
@@ -316,7 +322,6 @@ public class Subscription implements ConsumableChannel {
 
         break;
       } else {
-
         if (isStreamAware) {
           final int streamId = buffer.getInt(streamIdOffset(partitionOffset));
           if (readBytes == 0) {
@@ -329,6 +334,9 @@ public class Subscription implements ConsumableChannel {
         final byte flags = buffer.getByte(flagsOffset(partitionOffset));
         if (!isReadingBatch) {
           isReadingBatch = flagBatchBegin(flags);
+
+          // mark the beginning of the fragment/batch
+          startPos = position(partitionId, offset);
         } else {
           isReadingBatch = !flagBatchEnd(flags);
         }
@@ -339,6 +347,19 @@ public class Subscription implements ConsumableChannel {
           readBytes += alignedFrameLength;
 
           if (!isReadingBatch) {
+            // if we just finished reading the batch, store the handler
+            if (startPos != -1) {
+              var handler = handlers.remove(startPos);
+              if (handler == null) {
+                throw new IllegalStateException(
+                    String.format(
+                        "Expected to find handler for fragment batch with position %d but none was found.",
+                        this.position.get()));
+              }
+              availableBlock.addHandler(handler);
+              startPos = -1;
+            }
+
             offset = partitionOffset;
           }
         } else {

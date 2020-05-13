@@ -95,8 +95,8 @@ public final class DispatcherBuilder {
 
     // allocate the counters
 
-    AtomicPosition publisherLimit = null;
-    AtomicPosition publisherPosition = null;
+    AtomicPosition publisherLimit;
+    AtomicPosition publisherPosition;
 
     final long initialPosition = position(initialPartitionId, 0);
 

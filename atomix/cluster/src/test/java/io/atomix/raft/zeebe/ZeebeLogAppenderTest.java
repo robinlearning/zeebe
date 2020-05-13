@@ -19,6 +19,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 import com.google.common.base.Stopwatch;
+import io.atomix.raft.zeebe.ZeebeLogAppender.AppendListener;
 import io.atomix.raft.zeebe.util.TestAppender;
 import io.atomix.raft.zeebe.util.ZeebeTestHelper;
 import io.atomix.raft.zeebe.util.ZeebeTestNode;
@@ -108,15 +109,30 @@ public class ZeebeLogAppenderTest {
     // given
     final ZeebeLogAppender appender = helper.awaitLeaderAppender(1);
     final ByteBuffer data = ByteBuffer.allocate(Integer.BYTES).putInt(0, 1);
-    final Indexed<ZeebeEntry> first = appenderListener.append(appender, 4, 5, data);
+    appenderListener.append(appender, data);
 
     // when
-    appender.appendEntry(5, 5, data, appenderListener);
+    appender.appendEntry(
+        data,
+        new AppendListener() {
+          @Override
+          public void onWrite(Indexed<ZeebeEntry> indexed) {}
+
+          @Override
+          public void onWriteError(Throwable error) {}
+
+          @Override
+          public void updateRecords(ZeebeEntry entry, long index) {}
+
+          @Override
+          public void onCommit(Indexed<ZeebeEntry> indexed) {}
+
+          @Override
+          public void onCommitError(Indexed<ZeebeEntry> indexed, Throwable error) {}
+        });
     final Throwable error = appenderListener.pollError();
 
     // then
-    assertEquals(4, (first.entry().lowestPosition()));
-    assertEquals(5, (first.entry().highestPosition()));
     assertNotNull(error);
     assertEquals(IllegalStateException.class, error.getClass());
   }
@@ -127,6 +143,6 @@ public class ZeebeLogAppenderTest {
 
   private void append(final ByteBuffer data) {
     final ZeebeLogAppender appender = helper.awaitLeaderAppender(1);
-    appender.appendEntry(0, 0, data, appenderListener);
+    appender.appendEntry(data, appenderListener);
   }
 }

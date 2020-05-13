@@ -9,6 +9,9 @@ package io.zeebe.logstreams.util;
 
 import io.zeebe.logstreams.log.LogStreamRecordWriter;
 import io.zeebe.test.util.TestUtil;
+import java.util.Optional;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import org.agrona.DirectBuffer;
 import org.junit.rules.ExternalResource;
@@ -43,7 +46,11 @@ public final class LogStreamWriterRule extends ExternalResource {
     long lastPosition = -1;
     for (int i = 1; i <= count; i++) {
       final long key = i;
-      lastPosition = writeEventInternal(w -> w.key(key).value(event));
+      try {
+        lastPosition = writeEventInternal(w -> w.key(key).value(event)).get(5, TimeUnit.SECONDS);
+      } catch (Exception e) {
+        throw new RuntimeException(e);
+      }
     }
 
     waitForPositionToBeAppended(lastPosition);
@@ -56,23 +63,25 @@ public final class LogStreamWriterRule extends ExternalResource {
   }
 
   public long writeEvent(final Consumer<LogStreamRecordWriter> writer) {
-    final long position = writeEventInternal(writer);
-
-    waitForPositionToBeAppended(position);
-
-    return position;
+    try {
+      final long position = writeEventInternal(writer).get(5, TimeUnit.SECONDS);
+      waitForPositionToBeAppended(position);
+      return position;
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 
-  private long writeEventInternal(final Consumer<LogStreamRecordWriter> writer) {
-    long position;
+  private Future<Long> writeEventInternal(final Consumer<LogStreamRecordWriter> writer) {
+    Optional<Future<Long>> optFuture;
     do {
-      position = tryWrite(writer);
-    } while (position == -1);
+      optFuture = tryWrite(writer);
+    } while (optFuture.isEmpty());
 
-    return position;
+    return optFuture.get();
   }
 
-  public long tryWrite(final Consumer<LogStreamRecordWriter> writer) {
+  public Optional<Future<Long>> tryWrite(final Consumer<LogStreamRecordWriter> writer) {
     writer.accept(logStreamWriter);
 
     return logStreamWriter.tryWrite();

@@ -82,16 +82,12 @@ public class ListLogStorage implements LogStorage {
   }
 
   @Override
-  public void append(
-      final long lowestPosition,
-      final long highestPosition,
-      final ByteBuffer blockBuffer,
-      final AppendListener listener) {
+  public void append(final ByteBuffer blockBuffer, final AppendListener listener) {
     try {
-      final var entry = new Entry(lowestPosition, highestPosition, blockBuffer);
+      final var entry = new Entry( blockBuffer);
       entries.add(entry);
       final var index = entries.size();
-      positionIndexMapping.put(lowestPosition, index);
+      positionIndexMapping.put(, index);
       listener.onWrite(index);
 
       if (positionListener != null) {
