@@ -1,4 +1,6 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
   <modelVersion>4.0.0</modelVersion>
   <name>Zeebe Parent</name>
@@ -63,6 +65,7 @@
     <version.netty-tcnative>2.0.30.Final</version.netty-tcnative>
     <version.objenesis>3.1</version.objenesis>
     <version.prometheus>0.9.0</version.prometheus>
+    <version.micrometer>1.5.1</version.micrometer>
     <version.protobuf>3.12.0</version.protobuf>
     <version.rocksdbjni>6.8.1</version.rocksdbjni>
     <version.sbe>1.17.0</version.sbe>
@@ -479,6 +482,18 @@
       </dependency>
 
       <dependency>
+        <groupId>io.micrometer</groupId>
+        <artifactId>micrometer-core</artifactId>
+        <version>${version.micrometer}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>io.micrometer</groupId>
+        <artifactId>micrometer-registry-prometheus</artifactId>
+        <version>${version.micrometer}</version>
+      </dependency>
+
+      <dependency>
         <groupId>me.dinowernli</groupId>
         <artifactId>java-grpc-prometheus</artifactId>
         <version>${version.java-grpc-prometheus}</version>
@@ -551,8 +566,30 @@
       </dependency>
       <dependency>
         <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-autoconfigure</artifactId>
+        <artifactId>spring-boot-actuator-autoconfigure</artifactId>
         <version>${version.spring-boot}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-actuator</artifactId>
+        <version>${version.spring-boot}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+        <version>${version.spring-boot}</version>
+
+        <exclusions>
+          <exclusion>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-to-slf4j</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
 
       <dependency>
@@ -886,7 +923,7 @@
                     </goals>
                   </pluginExecutionFilter>
                   <action>
-                    <ignore />
+                    <ignore/>
                   </action>
                 </pluginExecution>
               </pluginExecutions>
@@ -979,7 +1016,7 @@
               </goals>
               <configuration>
                 <rules>
-                  <dependencyConvergence />
+                  <dependencyConvergence/>
                 </rules>
               </configuration>
             </execution>

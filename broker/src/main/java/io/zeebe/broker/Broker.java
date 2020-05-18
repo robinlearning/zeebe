@@ -15,7 +15,6 @@ import io.atomix.raft.partition.RaftPartition;
 import io.atomix.raft.partition.RaftPartitionGroup;
 import io.atomix.utils.net.Address;
 import io.prometheus.client.CollectorRegistry;
-import io.prometheus.client.hotspot.DefaultExports;
 import io.zeebe.broker.bootstrap.CloseProcess;
 import io.zeebe.broker.bootstrap.StartProcess;
 import io.zeebe.broker.clustering.atomix.AtomixFactory;
@@ -75,7 +74,7 @@ public final class Broker implements AutoCloseable {
 
   static {
     // enable hotspot prometheus metric collection
-    DefaultExports.initialize();
+    // DefaultExports.initialize();
   }
 
   private final SystemContext brokerContext;
