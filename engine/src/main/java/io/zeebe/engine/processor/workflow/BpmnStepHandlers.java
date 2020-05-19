@@ -54,8 +54,6 @@ import io.zeebe.engine.processor.workflow.handlers.multiinstance.MultiInstanceBo
 import io.zeebe.engine.processor.workflow.handlers.multiinstance.MultiInstanceBodyTerminatingHandler;
 import io.zeebe.engine.processor.workflow.handlers.receivetask.ReceiveTaskEventOccurredHandler;
 import io.zeebe.engine.processor.workflow.handlers.seqflow.FlowOutElementCompletedHandler;
-import io.zeebe.engine.processor.workflow.handlers.seqflow.ParallelMergeSequenceFlowTaken;
-import io.zeebe.engine.processor.workflow.handlers.seqflow.SequenceFlowTakenHandler;
 import io.zeebe.engine.processor.workflow.handlers.servicetask.ServiceTaskElementActivatedHandler;
 import io.zeebe.engine.processor.workflow.handlers.servicetask.ServiceTaskElementTerminatingHandler;
 import io.zeebe.engine.processor.workflow.message.BufferedMessageToStartEventCorrelator;
@@ -181,10 +179,6 @@ public final class BpmnStepHandlers {
     stepHandlers.put(
         BpmnStep.EVENT_SUBPROC_EVENT_OCCURRED,
         new EventSubProcessEventOccurredHandler<>(catchEventBehavior));
-
-    stepHandlers.put(
-        BpmnStep.PARALLEL_MERGE_SEQUENCE_FLOW_TAKEN, new ParallelMergeSequenceFlowTaken<>());
-    stepHandlers.put(BpmnStep.SEQUENCE_FLOW_TAKEN, new SequenceFlowTakenHandler<>());
 
     stepHandlers.put(
         BpmnStep.MULTI_INSTANCE_ACTIVATING,

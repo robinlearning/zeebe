@@ -12,6 +12,7 @@ import io.zeebe.engine.nwe.container.MultiInstanceBodyProcessor;
 import io.zeebe.engine.nwe.container.ProcessProcessor;
 import io.zeebe.engine.nwe.container.SubProcessProcessor;
 import io.zeebe.engine.nwe.gateway.ExclusiveGatewayProcessor;
+import io.zeebe.engine.nwe.sequenceflow.SequenceFlowProcessor;
 import io.zeebe.engine.nwe.task.ServiceTaskProcessor;
 import io.zeebe.engine.processor.workflow.deployment.model.element.ExecutableFlowElement;
 import io.zeebe.protocol.record.value.BpmnElementType;
@@ -33,6 +34,8 @@ public final class BpmnElementProcessors {
     processors.put(BpmnElementType.SUB_PROCESS, new SubProcessProcessor(bpmnBehaviors));
     processors.put(
         BpmnElementType.MULTI_INSTANCE_BODY, new MultiInstanceBodyProcessor(bpmnBehaviors));
+    // others
+    processors.put(BpmnElementType.SEQUENCE_FLOW, new SequenceFlowProcessor(bpmnBehaviors));
   }
 
   public <T extends ExecutableFlowElement> BpmnElementProcessor<T> getProcessor(
